@@ -7,6 +7,7 @@
             class="target text"
             :data-obj-index="index"
             :data-obj-type="object.type"
+            :data-obj-id="object.id"
             :style="canvasObjStyle(object)"
             v-if="object.type == 'text'"
             :contentEditable="true"
@@ -18,6 +19,7 @@
             class="target"
             :data-obj-index="index"
             :data-obj-type="object.type"
+            :data-obj-id="object.id"
             :style="canvasObjStyle(object)"
             v-if="object.type == 'image'"
           >
@@ -27,6 +29,7 @@
             class="target"
             :data-obj-index="index"
             :data-obj-type="object.type"
+            :data-obj-id="object.id"
             :style="canvasObjStyle(object)"
             v-if="object.type == 'shape'"
             :width="object.width"
@@ -43,6 +46,7 @@
       <button @click="addObjectToCanvas('image')">Add Image</button>
       <button @click="addObjectToCanvas('shape')">Add Shape</button>
       <button @click="unselectAll">Unselect All</button>
+      {{ displayIndex }}
       <div v-if="displayIndex > -1" style="margin-top: 50px">
         <div>
           <template v-if="canvasObjects[displayIndex].type == 'text'">
@@ -147,7 +151,15 @@ export default {
   beforeDestroy() {
     document.removeEventListener("keydown", this.moveWithArrows);
   },
-  watch: {},
+  watch: {
+    canvasObjects:{
+      handler(){
+        this.nMoveable.updateRect()
+        console.log("Updating canvasObjects")
+      },
+      deep:true
+    }
+  },
   methods: {
     addMoveable() {
       this.nMoveable = new Moveable(this.container, {
@@ -319,12 +331,12 @@ export default {
       } else {
         this.nMoveable.renderDirections = ["n", "ne", "s", "nw", "e", "se", "w", "sw"];
       }
-      if (this.nMoveable.target && this.nMoveable.target.length > 0) {
-        this.canvasObjects[
-          this.nMoveable.target[0].dataset.objIndex
-        ].contentEditable = false;
-        this.displayIndex = -1;
-      }
+      // if (this.nMoveable.target && this.nMoveable.target.length > 0) {
+      //   this.canvasObjects[
+      //     this.nMoveable.target[0].dataset.objIndex
+      //   ].contentEditable = false;
+      //   this.displayIndex = -1;
+      // }
 
       this.targets = e.selected;
       this.nMoveable.target = this.targets;
@@ -340,6 +352,14 @@ export default {
 
       this.bindClickEventToMoveableControls();
       console.log("onSelectEnd function ended");
+      // console.log(e);
+      console.log(e.selected[0]);
+      // console.log(e.target.dataset);
+      // console.log(e.target.dataset.objIndex);
+
+      if (e.selected.length == 0) {
+        this.displayIndex = -1;
+      }
     },
     onSelect(e) {
       console.log("onSelect");
@@ -473,6 +493,10 @@ export default {
       this.setFrameFromTarget(e.target);
       const frame = nframeMap.get(e.target);
       e.set(frame.translate);
+      console.log(e.target.dataset.objIndex, typeof e.target.dataset.objIndex);
+      console.log(this.displayIndex);
+      this.displayIndex = e.target.dataset.objIndex;
+      console.log(this.displayIndex);
     },
     handleDrag(e) {
       console.log("handleDrag");
@@ -703,16 +727,40 @@ export default {
         color: "#000000",
         id: _.uniqueId("item-"),
         contentEditable: false,
+        selected: true,
       });
-      console.log('div[data-obj-index="' + (this.canvasObjects.length - 1) + '"]')
-      console.log(
-        document.querySelectorAll(
-          'div[data-obj-index="' + (this.canvasObjects.length - 1) + '"]'
-        )
-      );
-      this.nMoveable.target = [];
-      this.nMoveable.emit("selected");
-      console.log(this.nMoveable.emit("selected"))
+      console.log('div[data-obj-index="' + (this.canvasObjects.length - 1) + '"]');
+      console.log("Length: " + this.canvasObjects.length + '"]');
+      console.log("Object: ", this.canvasObjects[this.canvasObjects.length - 1].id);
+      let objId = this.canvasObjects[this.canvasObjects.length - 1].id;
+
+      let self = this;
+      setTimeout(function () {
+        let element = document.querySelectorAll(`[data-obj-id="${objId}"]`);
+        let element2 = `document.querySelectorAll('[data-obj-id="${objId}"]')`;
+        console.log(element, element2);
+        if (element.length > 0) {
+          // self.nMoveable.target[0];
+          console.log(element[0]);
+
+          self.nMoveable.target.push(element[0]);
+          self.nMoveable.target[0].classList.add("selected");
+          // element[0].click();
+
+          // self.nMoveable.select()
+          // self.nMoveable.dragStart();
+        }
+        self.nMoveable.updateRect();
+        self.nMoveable.updateSelectors();
+        self.nMoveable.request("draggable");
+        // self.nMoveable.request("draggable");
+      });
+      this.$nextTick(() => {
+        // self.nMoveable.request("draggable", { deltaX: 10, deltaY: 10 }, true);
+        // self.nMoveable.dragStart();
+      });
+      // this.nMoveable.emit("selected");
+      console.log(this.nMoveable.emit("selected"));
       console.log(this.canvasObjects.length - 1);
     },
     displayPoperties(index) {
@@ -749,6 +797,7 @@ export default {
       color:${object.color};
       `;
       console.log(styleString);
+      // this.nMoveable.updateRect();
       return styleString;
     },
     doubleClicked(e) {
@@ -937,6 +986,7 @@ export default {
     },
     unselectAll() {
       this.nMoveable.target = [];
+      this.displayIndex = -1;
     },
   },
 };

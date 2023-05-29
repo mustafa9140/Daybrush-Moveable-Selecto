@@ -1,17 +1,36 @@
 <template>
   <div>
+    <!-- <vue-scene v-bind:easing="easing" v-bind:time="time">
+      <div class="container">
+        <vue-scene-item v-bind:keyframes="keyframes">
+          <div class="raindrop"></div>
+        </vue-scene-item>
+        <vue-scene-item v-bind:keyframes="keyframes" v-bind:delay="0.4">
+          <div class="raindrop"></div>
+        </vue-scene-item>
+        <vue-scene-item v-bind:keyframes="keyframes" v-bind:delay="0.8">
+          <div class="raindrop"></div>
+        </vue-scene-item>
+      </div>
+    </vue-scene> -->
+
     <div class="canvas-section-wrapper" style="position: relative">
       <div class="html-container shadow">
+        <div class=" ">
+          <div class="raindrop raindrop1"></div>
+          <div class="raindrop raindrop2"></div>
+          <div class="raindrop raindrop3"></div>
+        </div>
         <div v-for="(object, index) in canvasObjects" :key="object.id">
           <div
-            class="target text"
+            class="target text raindrop"
             :data-obj-index="index"
             :data-obj-type="object.type"
+            :data-obj-id="object.id"
             :style="canvasObjStyle(object)"
             v-if="object.type == 'text'"
-            :contentEditable="object.contentEditable ? true : false"
+            :contentEditable="true"
             @dblclick="doubleClicked"
-            :data-id="object.id"
           >
             Editable Text
           </div>
@@ -19,9 +38,9 @@
             class="target"
             :data-obj-index="index"
             :data-obj-type="object.type"
+            :data-obj-id="object.id"
             :style="canvasObjStyle(object)"
             v-if="object.type == 'image'"
-            :data-id="object.id"
           >
             <img :src="object.source" />
           </div>
@@ -29,11 +48,11 @@
             class="target"
             :data-obj-index="index"
             :data-obj-type="object.type"
+            :data-obj-id="object.id"
             :style="canvasObjStyle(object)"
             v-if="object.type == 'shape'"
             :width="object.width"
             :height="object.height"
-            :data-id="object.id"
           >
             <img src="@/assets/star-icon.svg" />
           </div>
@@ -45,6 +64,8 @@
       <button @click="addObjectToCanvas('text')">Add Text</button>
       <button @click="addObjectToCanvas('image')">Add Image</button>
       <button @click="addObjectToCanvas('shape')">Add Shape</button>
+      <button @click="unselectAll">Unselect All</button>
+      {{ displayIndex }}
       <div v-if="displayIndex > -1" style="margin-top: 50px">
         <div>
           <template v-if="canvasObjects[displayIndex].type == 'text'">
@@ -85,14 +106,52 @@
 import Moveable from "moveable";
 import _ from "lodash";
 import Selecto from "selecto";
+// import { useScene } from "vue2-scenejs";
+// import { selectorAll } from "scenejs";
+// import {
+//   VueScene,
+//   VueSceneItem,
+//   EASE_IN_OUT,
+// } from "vue-scenejs";
+import { useScene } from "vue2-scenejs";
+import { selectorAll } from "scenejs";
+import { onMounted } from "@vue/composition-api";
+
 export default {
+  components: {
+    // VueScene,
+    // VueSceneItem
+  },
+  setup() {
+    const scene = useScene(
+      {
+        ".raindrop": selectorAll(
+          (i) => ({
+            0: { "border-width": "150px", opacity: 1, transform: "scale(0)" },
+            1.5: {
+              "border-width": "0px",
+              opacity: 0.3,
+              transform: "scale(0.7)",
+            },
+            options: { delay: i * 0.4 },
+          }),
+          3
+        ),
+      },
+      {
+        selector: true,
+        easing: "ease-in-out",
+        iterationCount: "infinite",
+      }
+    );
+
+    onMounted(() => {
+      scene.play();
+    });
+  },
   data() {
     return {
-      textObjects: [
-        {
-          text: "placeholder text",
-        },
-      ],
+      // scene: null,
 
       canvasObjects: [
         // {
@@ -132,9 +191,59 @@ export default {
       rulerOffsetLeft: 0,
       coordinatePositionY: 0,
       coordinatePositionX: 0,
+
+      // easing: EASE_IN_OUT,
+      // time: 0,
+      // keyframes: {
+      //   0: { "border-width": "150px", opacity: 1, transform: "scale(0)" },
+      //   1: { "border-width": "0px", opacity: 0.3, transform: "scale(0.7)" },
+      // },
+      scene: useScene(
+        {
+          ".raindrop": selectorAll(
+            (i) => ({
+              0: { "border-width": "150px", opacity: 1, transform: "scale(0)" },
+              1.5: {
+                "border-width": "0px",
+                opacity: 0.3,
+                transform: "scale(0.7)",
+              },
+              options: { delay: i * 0.4 },
+            }),
+            3
+          ),
+        },
+        {
+          selector: true,
+          easing: "ease-in-out",
+          iterationCount: "infinite",
+        }
+      ),
     };
   },
   mounted() {
+    // this.scene = useScene(
+    //         {
+    //           ".raindrop": selectorAll(
+    //                   (i) => ({
+    //                     0: { "border-width": "150px", opacity: 1, transform: "scale(0)" },
+    //                     1.5: {
+    //                       "border-width": "0px",
+    //                       opacity: 0.3,
+    //                       transform: "scale(0.7)",
+    //                     },
+    //                     options: { delay: i * 0.4 },
+    //                   }),
+    //                   3
+    //           ),
+    //         },
+    //         {
+    //           selector: true,
+    //           easing: "ease-in-out",
+    //           iterationCount: "infinite",
+    //         }
+    // );
+
     this.container = document.querySelector(".html-container");
     this.bindClickEventToMoveableControls();
     this.addMoveable();
@@ -145,11 +254,20 @@ export default {
     window.addEventListener("keydown", this.throttleFunctionReference);
     // document.addEventListener("keydown", this.moveWithArrows);
     console.log("Mounted");
+    this.scene.play();
   },
   beforeDestroy() {
     document.removeEventListener("keydown", this.moveWithArrows);
   },
-  watch: {},
+  watch: {
+    canvasObjects: {
+      handler() {
+        this.nMoveable.updateRect();
+        console.log("Updating canvasObjects");
+      },
+      deep: true,
+    },
+  },
   methods: {
     addMoveable() {
       this.nMoveable = new Moveable(this.container, {
@@ -178,7 +296,7 @@ export default {
         elementGuidelines: [],
         snapElement: true,
         defaultGroupRotate: 0,
-        passDragArea: true,
+        passDragArea: false,
         snapThreshold: 5,
         verticalGuidelines: this.getVerticalGuidelines,
         horizontalGuidelines: this.getHorizontalGuidelines,
@@ -321,12 +439,12 @@ export default {
       } else {
         this.nMoveable.renderDirections = ["n", "ne", "s", "nw", "e", "se", "w", "sw"];
       }
-      if (this.nMoveable.target && this.nMoveable.target.length > 0) {
-        this.canvasObjects[
-          this.nMoveable.target[0].dataset.objIndex
-        ].contentEditable = false;
-        this.displayIndex = -1;
-      }
+      // if (this.nMoveable.target && this.nMoveable.target.length > 0) {
+      //   this.canvasObjects[
+      //     this.nMoveable.target[0].dataset.objIndex
+      //   ].contentEditable = false;
+      //   this.displayIndex = -1;
+      // }
 
       this.targets = e.selected;
       this.nMoveable.target = this.targets;
@@ -342,6 +460,14 @@ export default {
 
       this.bindClickEventToMoveableControls();
       console.log("onSelectEnd function ended");
+      // console.log(e);
+      console.log(e.selected[0]);
+      // console.log(e.target.dataset);
+      // console.log(e.target.dataset.objIndex);
+
+      if (e.selected.length == 0) {
+        this.displayIndex = -1;
+      }
     },
     onSelect(e) {
       console.log("onSelect");
@@ -392,14 +518,18 @@ export default {
         targets.some((t) => t === target || t.contains(target))
       ) {
         // e.stop();
-        if (e.inputEvent && e.inputEvent.detail % 2 == 0) {
+        console.log(e.isDouble);
+        if (e.inputEvent && e.isDouble) {
           console.log("Double Click Event and is text");
           console.log([this.nMoveable.target]);
+          console.log(this.nMoveable);
+          this.nMoveable.target.contentEditable = true;
 
           // this.nMoveable.target.contentEditable = true;
-          e.selected[0].contentEditable = true;
-          this.nMoveable.emit("selected");
-          console.log(this.nMoveable);
+          // this.canvasObjects[
+          //   this.nMoveable.target[0].dataset.objIndex
+          // ].contentEditable = true;
+          this.nMoveable.target = [];
           e.stop();
         }
       }
@@ -471,6 +601,10 @@ export default {
       this.setFrameFromTarget(e.target);
       const frame = nframeMap.get(e.target);
       e.set(frame.translate);
+      console.log(e.target.dataset.objIndex, typeof e.target.dataset.objIndex);
+      console.log(this.displayIndex);
+      this.displayIndex = e.target.dataset.objIndex;
+      console.log(this.displayIndex);
     },
     handleDrag(e) {
       console.log("handleDrag");
@@ -685,6 +819,7 @@ export default {
     },
     addObjectToCanvas(type) {
       // console.log(type);
+      this.nMoveable.target = [];
       this.canvasObjects.push({
         type: type,
         source: "https://loremflickr.com/640/360",
@@ -700,9 +835,41 @@ export default {
         color: "#000000",
         id: _.uniqueId("item-"),
         contentEditable: false,
+        selected: true,
       });
-      console.log(this.canvasObjects);
-      
+      console.log('div[data-obj-index="' + (this.canvasObjects.length - 1) + '"]');
+      console.log("Length: " + this.canvasObjects.length + '"]');
+      console.log("Object: ", this.canvasObjects[this.canvasObjects.length - 1].id);
+      let objId = this.canvasObjects[this.canvasObjects.length - 1].id;
+
+      let self = this;
+      setTimeout(function () {
+        let element = document.querySelectorAll(`[data-obj-id="${objId}"]`);
+        let element2 = `document.querySelectorAll('[data-obj-id="${objId}"]')`;
+        console.log(element, element2);
+        if (element.length > 0) {
+          // self.nMoveable.target[0];
+          console.log(element[0]);
+
+          self.nMoveable.target.push(element[0]);
+          self.nMoveable.target[0].classList.add("selected");
+          // element[0].click();
+
+          // self.nMoveable.select()
+          // self.nMoveable.dragStart();
+        }
+        self.nMoveable.updateRect();
+        self.nMoveable.updateSelectors();
+        self.nMoveable.request("draggable");
+        // self.nMoveable.request("draggable");
+      });
+      this.$nextTick(() => {
+        // self.nMoveable.request("draggable", { deltaX: 10, deltaY: 10 }, true);
+        // self.nMoveable.dragStart();
+      });
+      // this.nMoveable.emit("selected");
+      console.log(this.nMoveable.emit("selected"));
+      console.log(this.canvasObjects.length - 1);
     },
     displayPoperties(index) {
       // console.log(index);
@@ -738,13 +905,14 @@ export default {
       color:${object.color};
       `;
       console.log(styleString);
+      // this.nMoveable.updateRect();
       return styleString;
     },
     doubleClicked(e) {
       console.log("Double Click");
       console.log(e);
       console.log(this.canvasObjects[e.target.dataset.objIndex]);
-      this.canvasObjects[e.target.dataset.objIndex].contentEditable = true;
+      // this.canvasObjects[e.target.dataset.objIndex].contentEditable = true;
     },
     keydownHandler(e) {
       if (this.nMoveable) {
@@ -924,6 +1092,10 @@ export default {
         }
       }
     },
+    unselectAll() {
+      this.nMoveable.target = [];
+      this.displayIndex = -1;
+    },
   },
 };
 </script>
@@ -966,5 +1138,19 @@ export default {
 }
 .html-container {
   min-height: 90vh;
+}
+.raindrop {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  margin: auto;
+  border: 100px solid black;
+  border-radius: 50%;
+  box-sizing: border-box;
+  transform: scale(0);
 }
 </style>
